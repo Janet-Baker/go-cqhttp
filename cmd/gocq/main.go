@@ -27,7 +27,6 @@ import (
 	"github.com/Mrs4s/go-cqhttp/internal/base"
 	"github.com/Mrs4s/go-cqhttp/internal/cache"
 	"github.com/Mrs4s/go-cqhttp/internal/selfdiagnosis"
-	"github.com/Mrs4s/go-cqhttp/internal/selfupdate"
 	"github.com/Mrs4s/go-cqhttp/modules/servers"
 	"github.com/Mrs4s/go-cqhttp/server"
 )
@@ -44,7 +43,7 @@ var allowStatus = [...]client.UserOnlineStatus{
 // Main 启动主程序
 func Main() {
 	base.Parse()
-	if !base.FastStart && terminal.RunningByDoubleClick() {
+	if terminal.RunningByDoubleClick() {
 		err := terminal.NoMoreDoubleClick()
 		if err != nil {
 			log.Errorf("遇到错误: %v", err)
@@ -107,12 +106,6 @@ func Main() {
 	if len(arg) > 1 {
 		for i := range arg {
 			switch arg[i] {
-			case "update":
-				if len(arg) > i+1 {
-					selfupdate.SelfUpdate(arg[i+1])
-				} else {
-					selfupdate.SelfUpdate("")
-				}
 			case "key":
 				p := i + 1
 				if len(arg) > p {
@@ -125,13 +118,8 @@ func Main() {
 
 	if (base.Account.Uin == 0 || (base.Account.Password == "" && !base.Account.Encrypt)) && !global.PathExists("session.token") {
 		log.Warn("账号密码未配置, 将使用二维码登录.")
-		if !base.FastStart {
-			log.Warn("将在 5秒 后继续.")
-			time.Sleep(time.Second * 5)
-		}
 	}
 
-	log.Info("当前版本:", base.Version)
 	if base.Debug {
 		log.SetLevel(log.DebugLevel)
 		log.Warnf("已开启Debug模式.")
@@ -200,10 +188,6 @@ func Main() {
 	} else if len(base.Account.Password) > 0 {
 		base.PasswordHash = md5.Sum([]byte(base.Account.Password))
 	}
-	if !base.FastStart {
-		log.Info("Bot将在5秒后登录并开始信息处理, 按 Ctrl+C 取消.")
-		time.Sleep(time.Second * 5)
-	}
 	log.Info("开始尝试登录并同步消息...")
 	log.Infof("使用协议: %s", client.SystemDeviceInfo.Protocol)
 	cli = newClient()
@@ -220,16 +204,9 @@ func Main() {
 				r := binary.NewReader(token)
 				cu := r.ReadInt64()
 				if cu != base.Account.Uin {
-					log.Warnf("警告: 配置文件内的QQ号 (%v) 与缓存内的QQ号 (%v) 不相同", base.Account.Uin, cu)
-					log.Warnf("1. 使用会话缓存继续.")
-					log.Warnf("2. 删除会话缓存并重启.")
-					log.Warnf("请选择:")
-					text := readIfTTY("1")
-					if text == "2" {
-						_ = os.Remove("session.token")
-						log.Infof("缓存已删除.")
-						os.Exit(0)
-					}
+					log.Fatalf("警告: 配置文件内的QQ号 (%v) 与缓存内的QQ号 (%v) 不相同", base.Account.Uin, cu)
+					log.Fatalf("警告: 请检查配置文件内的账号信息是否正确, 或删除 session.token 文件后重试.")
+					os.Exit(1)
 				}
 			}
 			if err = cli.TokenLogin(token); err != nil {
@@ -325,10 +302,8 @@ func Main() {
 
 	servers.Run(coolq.NewQQBot(cli))
 	log.Info("资源初始化完成, 开始处理信息.")
-	log.Info("アトリは、高性能ですから!")
 
 	go func() {
-		selfupdate.CheckUpdate()
 		selfdiagnosis.NetworkDiagnosis(cli)
 	}()
 
