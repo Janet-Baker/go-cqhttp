@@ -28,13 +28,14 @@ type Reconnect struct {
 
 // Account 账号配置
 type Account struct {
-	Uin              int64      `yaml:"uin"`
-	Password         string     `yaml:"password"`
-	Encrypt          bool       `yaml:"encrypt"`
-	Status           int        `yaml:"status"`
-	ReLogin          *Reconnect `yaml:"relogin"`
-	UseSSOAddress    bool       `yaml:"use-sso-address"`
-	AllowTempSession bool       `yaml:"allow-temp-session"`
+	Uin                   int64      `yaml:"uin"`
+	Password              string     `yaml:"password"`
+	Encrypt               bool       `yaml:"encrypt"`
+	Status                int        `yaml:"status"`
+	ReLogin               *Reconnect `yaml:"relogin"`
+	UseSSOAddress         bool       `yaml:"use-sso-address"`
+	AllowTempSession      bool       `yaml:"allow-temp-session"`
+	DisableProtocolUpdate bool       `yaml:"disable-protocol-update"`
 }
 
 // Config 总配置文件
@@ -55,7 +56,7 @@ type Config struct {
 		RemoveReplyAt       bool   `yaml:"remove-reply-at"`
 		ExtraReplyData      bool   `yaml:"extra-reply-data"`
 		SkipMimeScan        bool   `yaml:"skip-mime-scan"`
-		ConvertWebpImage	bool   `yaml:"convert-webp-image"`
+		ConvertWebpImage    bool   `yaml:"convert-webp-image"`
 	} `yaml:"message"`
 
 	Output struct {

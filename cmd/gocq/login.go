@@ -3,19 +3,25 @@ package gocq
 import (
 	"bufio"
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"image"
 	"image/png"
+	"net/http"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/Mrs4s/MiraiGo/client"
 	"github.com/Mrs4s/MiraiGo/utils"
+	"github.com/Mrs4s/MiraiGo/wrapper"
 	"github.com/mattn/go-colorable"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"github.com/tidwall/gjson"
 	"gopkg.ilharper.com/x/isatty"
+
+	"github.com/Mrs4s/go-cqhttp/internal/base"
 
 	"github.com/Mrs4s/go-cqhttp/global"
 	"github.com/Mrs4s/go-cqhttp/internal/download"
@@ -23,13 +29,17 @@ import (
 
 var console = bufio.NewReader(os.Stdin)
 
+func init() {
+	wrapper.DandelionEnergy = energy
+}
+
 func readLine() (str string) {
 	str, _ = console.ReadString('\n')
 	str = strings.TrimSpace(str)
 	return
 }
 
-func readLineTimeout(t time.Duration, de string) (str string) {
+func readLineTimeout(t time.Duration) {
 	r := make(chan string)
 	go func() {
 		select {
@@ -37,12 +47,10 @@ func readLineTimeout(t time.Duration, de string) (str string) {
 		case <-time.After(t):
 		}
 	}()
-	str = de
 	select {
-	case str = <-r:
+	case <-r:
 	case <-time.After(t):
 	}
-	return
 }
 
 func readIfTTY(de string) (str string) {
@@ -54,6 +62,7 @@ func readIfTTY(de string) (str string) {
 }
 
 var cli *client.QQClient
+var device *client.DeviceInfo
 
 // ErrSMSRequestError SMS请求出错
 var ErrSMSRequestError = errors.New("sms request error")
@@ -154,23 +163,15 @@ func loginResponseProcessor(res *client.LoginResponse) error {
 		var text string
 		switch res.Error {
 		case client.SliderNeededError:
-			log.Warnf("登录需要滑条验证码, 请选择验证方式: ")
-			log.Warnf("1. 使用浏览器抓取滑条并登录")
-			log.Warnf("2. 使用手机QQ扫码验证 (需要手Q和gocq在同一网络下).")
-			log.Warn("请输入(1 - 2)：")
-			text = readIfTTY("1")
-			if strings.Contains(text, "1") {
-				ticket := getTicket(res.VerifyUrl)
-				if ticket == "" {
-					os.Exit(0)
-				}
-				res, err = cli.SubmitTicket(ticket)
-				continue
+			log.Warnf("登录需要滑条验证码, 请验证后重试.")
+			ticket := getTicket(res.VerifyUrl)
+			if ticket == "" {
+				log.Infof("按 Enter 继续....")
+				readLine()
+				os.Exit(0)
 			}
-			cli.Disconnect()
-			cli.Release()
-			cli = client.NewClientEmpty()
-			return qrcodeLogin()
+			res, err = cli.SubmitTicket(ticket)
+			continue
 		case client.NeedCaptcha:
 			log.Warnf("登录需要验证码.")
 			_ = os.WriteFile("captcha.jpg", res.CaptchaImage, 0o644)
@@ -210,42 +211,44 @@ func loginResponseProcessor(res *client.LoginResponse) error {
 		case client.UnsafeDeviceError:
 			log.Warnf("账号已开启设备锁，请前往 -> %v <- 验证后重启Bot.", res.VerifyUrl)
 			log.Infof("按 Enter 或等待 5s 后继续....")
-			readLineTimeout(time.Second*5, "")
+			readLineTimeout(time.Second * 5)
 			os.Exit(0)
 		case client.OtherLoginError, client.UnknownLoginError, client.TooManySMSRequestError:
 			msg := res.ErrorMessage
-			if strings.Contains(msg, "版本") {
-				msg = "密码错误或账号被冻结"
-			} else if strings.Contains(msg, "冻结") {
-				log.Fatalf("账号被冻结")
+			log.Warnf("登录失败: %v Code: %v", msg, res.Code)
+			if res.Code == 235 {
+				log.Warnf("请删除 device.json 后重试.")
 			}
-			log.Warnf("登录失败: %v", msg)
-			log.Infof("按 Enter 或等待 5s 后继续....")
-			readLineTimeout(time.Second*5, "")
+			log.Infof("按 Enter 继续....")
+			readLine()
 			os.Exit(0)
 		}
 	}
 }
 
-func getTicket(u string) (str string) {
+func getTicket(u string) string {
+	log.Warnf("请选择提交滑块ticket方式:")
+	log.Warnf("1. 自动提交")
+	log.Warnf("2. 手动抓取提交")
+	log.Warn("请输入(1 - 2)：")
+	text := readLine()
 	id := utils.RandomString(8)
-	log.Warnf("请前往该地址验证 -> %v <- 或输入手动抓取的 ticket：（Enter 提交）", strings.ReplaceAll(u, "https://ssl.captcha.qq.com/template/wireless_mqq_captcha.html?", fmt.Sprintf("https://captcha.go-cqhttp.org/captcha?id=%v&", id)))
-	manual := make(chan string, 1)
-	go func() {
-		manual <- readLine()
-	}()
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
+	auto := !strings.Contains(text, "2")
+	if auto {
+		u = strings.ReplaceAll(u, "https://ssl.captcha.qq.com/template/wireless_mqq_captcha.html?", fmt.Sprintf("https://captcha.go-cqhttp.org/captcha?id=%v&", id))
+	}
+	log.Warnf("请前往该地址验证 -> %v ", u)
+	if !auto {
+		log.Warn("请输入ticket： (Enter 提交)")
+		return readLine()
+	}
+
 	for count := 120; count > 0; count-- {
-		select {
-		case <-ticker.C:
-			str = fetchCaptcha(id)
-			if str != "" {
-				return
-			}
-		case str = <-manual:
-			return
+		str := fetchCaptcha(id)
+		if str != "" {
+			return str
 		}
+		time.Sleep(time.Second)
 	}
 	log.Warnf("验证超时")
 	return ""
@@ -261,4 +264,28 @@ func fetchCaptcha(id string) string {
 		return g.Get("ticket").String()
 	}
 	return ""
+}
+
+func energy(uin uint64, id string, salt []byte) ([]byte, error) {
+	// temporary solution
+	signServer := "https://captcha.go-cqhttp.org/sdk/dandelion/energy"
+	if base.SignServerOverwrite != "" {
+		signServer = base.SignServerOverwrite
+	}
+	response, err := download.Request{
+		Method: http.MethodPost,
+		URL:    signServer,
+		Header: map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+		Body:   bytes.NewReader([]byte(fmt.Sprintf("uin=%v&id=%s&salt=%s", uin, id, hex.EncodeToString(salt)))),
+	}.Bytes()
+	if err != nil {
+		log.Errorf("获取T544时出现问题: %v", err)
+		return nil, err
+	}
+	sign, err := hex.DecodeString(gjson.GetBytes(response, "result").String())
+	if err != nil {
+		log.Errorf("获取T544时出现问题: %v", err)
+		return nil, err
+	}
+	return sign, nil
 }

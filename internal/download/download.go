@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/tidwall/gjson"
@@ -32,6 +33,7 @@ var client = &http.Client{
 		MaxIdleConns:        0,
 		MaxIdleConnsPerHost: 999,
 	},
+	Timeout: time.Second * 5,
 }
 
 // ErrOverSize 响应主体过大时返回此错误
@@ -42,13 +44,18 @@ const UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 
 
 // Request is a file download request
 type Request struct {
+	Method string
 	URL    string
 	Header map[string]string
 	Limit  int64
+	Body   io.Reader
 }
 
 func (r Request) do() (*http.Response, error) {
-	req, err := http.NewRequest(http.MethodGet, r.URL, nil)
+	if r.Method == "" {
+		r.Method = http.MethodGet
+	}
+	req, err := http.NewRequest(r.Method, r.URL, r.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +86,7 @@ func (r Request) body() (io.ReadCloser, error) {
 	return resp.Body, err
 }
 
-// Bytes 对给定URL发送Get请求，返回响应主体
+// Bytes 对给定URL发送请求，返回响应主体
 func (r Request) Bytes() ([]byte, error) {
 	rd, err := r.body()
 	if err != nil {
@@ -89,7 +96,7 @@ func (r Request) Bytes() ([]byte, error) {
 	return io.ReadAll(rd)
 }
 
-// JSON 发送GET请求， 并转换响应为JSON
+// JSON 发送请求， 并转换响应为JSON
 func (r Request) JSON() (gjson.Result, error) {
 	rd, err := r.body()
 	if err != nil {
@@ -111,6 +118,7 @@ func writeToFile(reader io.ReadCloser, path string) error {
 	if err != nil {
 		return err
 	}
+	defer func() { _ = file.Close() }()
 	_, err = file.ReadFrom(reader)
 	return err
 }
