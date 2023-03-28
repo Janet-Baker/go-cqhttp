@@ -2,14 +2,11 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
-
-	"github.com/Mrs4s/go-cqhttp/internal/base"
 )
 
 const js = `{
@@ -83,20 +80,7 @@ func main() {
 		panic(err)
 	}
 	defer f.Close()
-	v := ""
-	if base.Version == "(devel)" {
-		vartag := bytes.NewBuffer(nil)
-		vartagcmd := exec.Command("git", "tag", "--sort=committerdate")
-		vartagcmd.Stdout = vartag
-		err = vartagcmd.Run()
-		if err != nil {
-			panic(err)
-		}
-		s := strings.Split(vartag.String(), "\n")
-		v = s[len(s)-2]
-	} else {
-		v = base.Version
-	}
+	v := "devel"
 	i := strings.Index(v, "-") // remove -rc / -beta
 	if i <= 0 {
 		i = len(v)

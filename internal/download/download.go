@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/tidwall/gjson"
@@ -33,7 +32,6 @@ var client = &http.Client{
 		MaxIdleConns:        0,
 		MaxIdleConnsPerHost: 999,
 	},
-	Timeout: time.Second * 5,
 }
 
 // ErrOverSize 响应主体过大时返回此错误

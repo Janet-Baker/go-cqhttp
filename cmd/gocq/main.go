@@ -119,8 +119,7 @@ func LoginInteract() {
 	arg := os.Args
 	if len(arg) > 1 {
 		for i := range arg {
-			switch arg[i] {
-			case "key":
+			if arg[i] == "key" {
 				p := i + 1
 				if len(arg) > p {
 					byteKey = []byte(arg[p])
@@ -236,9 +235,7 @@ func LoginInteract() {
 				r := binary.NewReader(token)
 				cu := r.ReadInt64()
 				if cu != base.Account.Uin {
-					log.Fatalf("警告: 配置文件内的QQ号 (%v) 与缓存内的QQ号 (%v) 不相同", base.Account.Uin, cu)
-					log.Fatalf("警告: 请检查配置文件内的账号信息是否正确, 或删除 session.token 文件后重试.")
-					os.Exit(1)
+					log.Fatalf("错误: 配置文件内的QQ号 (%v) 与缓存内的QQ号 (%v) 不相同，请检查配置文件内的账号信息是否正确", base.Account.Uin, cu)
 				}
 			}
 			if err = cli.TokenLogin(token); err != nil {
