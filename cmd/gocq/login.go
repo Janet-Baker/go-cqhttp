@@ -15,6 +15,8 @@ import (
 	"github.com/Mrs4s/MiraiGo/client"
 	"github.com/Mrs4s/MiraiGo/utils"
 	"github.com/Mrs4s/MiraiGo/wrapper"
+	"github.com/Mrs4s/go-cqhttp/internal/encryption"
+	_ "github.com/Mrs4s/go-cqhttp/internal/encryption/t544"
 	"github.com/mattn/go-colorable"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -266,8 +268,14 @@ func fetchCaptcha(id string) string {
 	return ""
 }
 
-func energy(uin uint64, id string, salt []byte) ([]byte, error) {
-	// temporary solution
+func energy(uin uint64, id string, appVersion string, salt []byte) ([]byte, error) {
+	if localSigner, ok := encryption.T544Signer[appVersion]; ok {
+		log.Debugf("use local T544Signer v%s", appVersion)
+		result := localSigner(time.Now().UnixMicro(), salt)
+		log.Debugf("t544 sign result: %x", result)
+		return result, nil
+	}
+	log.Debugf("fallback to remote T544Signer v%s", appVersion)
 	signServer := "https://captcha.go-cqhttp.org/sdk/dandelion/energy"
 	if base.SignServerOverwrite != "" {
 		signServer = base.SignServerOverwrite
@@ -276,16 +284,17 @@ func energy(uin uint64, id string, salt []byte) ([]byte, error) {
 		Method: http.MethodPost,
 		URL:    signServer,
 		Header: map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
-		Body:   bytes.NewReader([]byte(fmt.Sprintf("uin=%v&id=%s&salt=%s", uin, id, hex.EncodeToString(salt)))),
+		Body:   bytes.NewReader([]byte(fmt.Sprintf("uin=%v&id=%s&salt=%s&version=%s", uin, id, hex.EncodeToString(salt), appVersion))),
 	}.Bytes()
 	if err != nil {
 		log.Errorf("获取T544时出现问题: %v", err)
 		return nil, err
 	}
 	sign, err := hex.DecodeString(gjson.GetBytes(response, "result").String())
-	if err != nil {
+	if err != nil || len(sign) == 0 {
 		log.Errorf("获取T544时出现问题: %v", err)
 		return nil, err
 	}
+	log.Debugf("t544 sign result: %x", sign)
 	return sign, nil
 }

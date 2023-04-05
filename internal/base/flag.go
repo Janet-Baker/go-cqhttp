@@ -36,6 +36,7 @@ var (
 	LogForceNew         bool   // 是否在每次启动时强制创建全新的文件储存日志
 	LogColorful         bool   // 是否启用日志颜色
 	AllowTempSession    bool   // 是否允许发送临时会话信息
+	UpdateProtocol      bool   // 是否更新协议
 	SignServerOverwrite string // 使用特定的服务器进行签名
 
 	PostFormat        string                 // 上报格式 string or array
@@ -59,6 +60,7 @@ func Parse() {
 	flag.BoolVar(&LittleH, "h", false, "this Help")
 	flag.StringVar(&LittleWD, "w", "", "cover the working directory")
 	d := flag.Bool("D", false, "debug mode")
+	flag.BoolVar(&UpdateProtocol, "update-protocol", false, "update protocol")
 	flag.StringVar(&SignServerOverwrite, "sign-server", "", "use special server to sign tlv")
 	flag.Parse()
 
