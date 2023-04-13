@@ -45,6 +45,11 @@ message:
   skip-mime-scan: false
   # 是否自动转换 WebP 图片
   convert-webp-image: false
+  # HTTP请求的超时时间, 单位秒
+  # 超时时间太长会花费过多资源，太短更容易报超时
+  # 只有网速太慢时才需要延长超时时间。
+  # 超时会导致原样发送CQ码或不发送任何内容。
+  http-timeout: 30
 
 output:
   # 日志等级 trace,debug,info,warn,error

@@ -32,18 +32,11 @@ func EncoderSilk(data []byte) ([]byte, error) {
 
 // EncodeMP4 将给定视频文件编码为MP4
 func EncodeMP4(src string, dst string) error { //        -y 覆盖文件
-	cmd1 := exec.Command("ffmpeg", "-i", src, "-y", "-c", "copy", "-map", "0", dst)
-	if errors.Is(cmd1.Err, exec.ErrDot) {
-		cmd1.Err = nil
+	cmd := exec.Command("ffmpeg", "-i", src, "-y", "-c", "copy", "-map", "0", dst)
+	if errors.Is(cmd.Err, exec.ErrDot) {
+		cmd.Err = nil
 	}
-	err := cmd1.Run()
-	if err != nil {
-		cmd2 := exec.Command("ffmpeg", "-i", src, "-y", "-c:v", "h264", "-c:a", "mp3", dst)
-		if errors.Is(cmd2.Err, exec.ErrDot) {
-			cmd2.Err = nil
-		}
-		return errors.Wrap(cmd2.Run(), "convert mp4 failed")
-	}
+	err := cmd.Run()
 	return err
 }
 

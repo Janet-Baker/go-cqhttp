@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"compress/gzip"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"net/url"
@@ -12,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/tidwall/gjson"
@@ -21,17 +23,17 @@ import (
 
 var client = &http.Client{
 	Transport: &http.Transport{
-		Proxy: func(request *http.Request) (u *url.URL, e error) {
+		Proxy: func(request *http.Request) (*url.URL, error) {
 			if base.Proxy == "" {
 				return http.ProxyFromEnvironment(request)
 			}
 			return url.Parse(base.Proxy)
 		},
-		ForceAttemptHTTP2:   false,
 		MaxConnsPerHost:     0,
 		MaxIdleConns:        0,
 		MaxIdleConnsPerHost: 999,
 	},
+	Timeout: time.Second * 5,
 }
 
 // ErrOverSize 响应主体过大时返回此错误
@@ -39,6 +41,14 @@ var ErrOverSize = errors.New("oversize")
 
 // UserAgent HTTP请求时使用的UA
 const UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36 Edg/87.0.664.66"
+
+// SetTimeout set internal/download client timeout
+func SetTimeout(t time.Duration) {
+	if t == 0 {
+		t = time.Second * 30
+	}
+	client.Timeout = t
+}
 
 // Request is a file download request
 type Request struct {
@@ -90,7 +100,12 @@ func (r Request) Bytes() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rd.Close()
+	defer func(rd io.ReadCloser) {
+		err := rd.Close()
+		if err != nil {
+			log.Errorf("关闭响应主体失败: %v", err)
+		}
+	}(rd)
 	return io.ReadAll(rd)
 }
 
@@ -100,7 +115,12 @@ func (r Request) JSON() (gjson.Result, error) {
 	if err != nil {
 		return gjson.Result{}, err
 	}
-	defer rd.Close()
+	defer func(rd io.ReadCloser) {
+		err := rd.Close()
+		if err != nil {
+			log.Errorf("关闭响应主体失败: %v", err)
+		}
+	}(rd)
 
 	var sb strings.Builder
 	_, err = io.Copy(&sb, rd)
@@ -121,17 +141,22 @@ func writeToFile(reader io.ReadCloser, path string) error {
 	return err
 }
 
-// WriteToFile 下载到制定目录
+// WriteToFile 下载到指定目录
 func (r Request) WriteToFile(path string) error {
 	rd, err := r.body()
 	if err != nil {
 		return err
 	}
-	defer rd.Close()
+	defer func(rd io.ReadCloser) {
+		err := rd.Close()
+		if err != nil {
+			log.Errorf("关闭响应主体失败: %v", err)
+		}
+	}(rd)
 	return writeToFile(rd, path)
 }
 
-// WriteToFileMultiThreading 多线程下载到制定目录
+// WriteToFileMultiThreading 多线程下载到指定目录
 func (r Request) WriteToFileMultiThreading(path string, thread int) error {
 	if thread < 2 {
 		return r.WriteToFile(path)
@@ -161,7 +186,12 @@ func (r Request) WriteToFileMultiThreading(path string, thread int) error {
 		if err != nil {
 			return err
 		}
-		defer resp.Body.Close()
+		defer func(Body io.ReadCloser) {
+			err := Body.Close()
+			if err != nil {
+				log.Errorf("关闭响应主体失败: %v", err)
+			}
+		}(resp.Body)
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 			return errors.New("response status unsuccessful: " + strconv.FormatInt(int64(resp.StatusCode), 10))
 		}
@@ -208,10 +238,20 @@ func (r Request) WriteToFileMultiThreading(path string, thread int) error {
 		if err != nil {
 			return err
 		}
-		defer file.Close()
+		defer func(file *os.File) {
+			err := file.Close()
+			if err != nil {
+				log.Errorf("关闭文件失败: %v", err)
+			}
+		}(file)
 		_, _ = file.Seek(block.BeginOffset, io.SeekStart)
 		writer := bufio.NewWriter(file)
-		defer writer.Flush()
+		defer func(writer *bufio.Writer) {
+			err := writer.Flush()
+			if err != nil {
+				log.Errorf("刷新缓冲区失败: %v", err)
+			}
+		}(writer)
 
 		header := make(map[string]string, len(r.Header))
 		for k, v := range r.Header { // copy headers
@@ -226,7 +266,12 @@ func (r Request) WriteToFileMultiThreading(path string, thread int) error {
 		if err != nil {
 			return err
 		}
-		defer resp.Body.Close()
+		defer func(Body io.ReadCloser) {
+			err := Body.Close()
+			if err != nil {
+				log.Errorf("关闭响应主体失败: %v", err)
+			}
+		}(resp.Body)
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 			return errors.New("response status unsuccessful: " + strconv.FormatInt(int64(resp.StatusCode), 10))
 		}

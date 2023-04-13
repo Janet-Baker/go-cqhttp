@@ -38,6 +38,7 @@ var (
 	AllowTempSession    bool   // 是否允许发送临时会话信息
 	UpdateProtocol      bool   // 是否更新协议
 	SignServerOverwrite string // 使用特定的服务器进行签名
+	HTTPTimeout         int
 
 	PostFormat        string                 // 上报格式 string or array
 	Proxy             string                 // 存储 proxy_rewrite,用于设置代理
@@ -86,6 +87,7 @@ func Init() {
 		ReportSelfMessage = conf.Message.ReportSelfMessage
 		UseSSOAddress = conf.Account.UseSSOAddress
 		AllowTempSession = conf.Account.AllowTempSession
+		HTTPTimeout = conf.Message.HTTPTimeout
 	}
 	{ // others
 		Proxy = conf.Message.ProxyRewrite
