@@ -25,7 +25,6 @@ import (
 	"github.com/Mrs4s/go-cqhttp/coolq"
 	"github.com/Mrs4s/go-cqhttp/db"
 	"github.com/Mrs4s/go-cqhttp/global"
-	"github.com/Mrs4s/go-cqhttp/global/terminal"
 	"github.com/Mrs4s/go-cqhttp/internal/base"
 	"github.com/Mrs4s/go-cqhttp/internal/cache"
 	"github.com/Mrs4s/go-cqhttp/internal/download"
@@ -45,19 +44,10 @@ var allowStatus = [...]client.UserOnlineStatus{
 
 // InitBase 解析参数并检测
 //
-//	如果在 windows 下双击打开了程序，程序将在此函数释出脚本后终止；
 //	如果传入 -h 参数，程序将打印帮助后终止；
 //	如果传入 -d 参数，程序将在启动 daemon 后终止。
 func InitBase() {
 	base.Parse()
-	if terminal.RunningByDoubleClick() {
-		err := terminal.NoMoreDoubleClick()
-		if err != nil {
-			log.Errorf("遇到错误: %v", err)
-			time.Sleep(time.Second * 5)
-		}
-		os.Exit(0)
-	}
 	switch {
 	case base.LittleH:
 		base.Help()
