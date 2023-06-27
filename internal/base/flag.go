@@ -36,7 +36,7 @@ var (
 	LogForceNew         bool   // 是否在每次启动时强制创建全新的文件储存日志
 	LogColorful         bool   // 是否启用日志颜色
 	AllowTempSession    bool   // 是否允许发送临时会话信息
-	SignServerOverwrite string // 使用特定的服务器进行签名
+	SignServer          string // 使用特定的服务器进行签名
 	HTTPTimeout         int
 
 	PostFormat        string                 // 上报格式 string or array
@@ -60,7 +60,6 @@ func Parse() {
 	flag.BoolVar(&LittleH, "h", false, "this Help")
 	flag.StringVar(&LittleWD, "w", "", "cover the working directory")
 	d := flag.Bool("D", false, "debug mode")
-	flag.StringVar(&SignServerOverwrite, "sign-server", "", "use special server to sign tlv")
 	flag.Parse()
 
 	if *d {
@@ -85,6 +84,7 @@ func Init() {
 		ReportSelfMessage = conf.Message.ReportSelfMessage
 		UseSSOAddress = conf.Account.UseSSOAddress
 		AllowTempSession = conf.Account.AllowTempSession
+		SignServer = conf.Account.SignServer
 		HTTPTimeout = conf.Message.HTTPTimeout
 	}
 	{ // others
