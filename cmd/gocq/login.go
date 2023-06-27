@@ -224,7 +224,6 @@ func loginResponseProcessor(res *client.LoginResponse) error {
 				log.Warnf("登录过于频繁, 请在手机QQ登录并根据提示完成认证后等一段时间重试")
 			case 45: // 在提供 t544 后还是出现45错误是需要强行升级到最新客户端或被限制非常用设备
 				log.Warnf("你的账号涉嫌违规被限制在非常用设备登录, 请在手机QQ登录并根据提示完成认证")
-				log.Warnf("或使用 -update-protocol 升级到最新协议后重试")
 			}
 			log.Infof("按 Enter 继续....")
 			readLine()

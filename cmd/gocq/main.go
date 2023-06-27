@@ -16,9 +16,7 @@ import (
 	"github.com/Mrs4s/MiraiGo/client"
 	para "github.com/fumiama/go-hide-param"
 	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"github.com/tidwall/gjson"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/term"
 
@@ -242,27 +240,6 @@ func LoginInteract() {
 		cli.Uin = base.Account.Uin
 		cli.PasswordMd5 = base.PasswordHash
 	}
-	log.Infof("正在检查协议更新...")
-	currentVersionName := device.Protocol.Version().SortVersionName
-	remoteVersion, err := getRemoteLatestProtocolVersion(int(device.Protocol.Version().Protocol))
-	if err == nil {
-		remoteVersionName := gjson.GetBytes(remoteVersion, "sort_version_name").String()
-		if remoteVersionName != currentVersionName {
-			switch {
-			case !base.UpdateProtocol:
-				log.Infof("检测到协议更新: %s -> %s", currentVersionName, remoteVersionName)
-				log.Infof("如果登录时出现版本过低错误, 可尝试使用 -update-protocol 参数启动")
-			case !isTokenLogin:
-				_ = device.Protocol.Version().UpdateFromJson(remoteVersion)
-				log.Infof("协议版本已更新: %s -> %s", currentVersionName, remoteVersionName)
-			default:
-				log.Infof("检测到协议更新: %s -> %s", currentVersionName, remoteVersionName)
-				log.Infof("由于使用了会话缓存, 无法自动更新协议, 请删除缓存后重试")
-			}
-		}
-	} else if err.Error() != "remote version unavailable" {
-		log.Warnf("检查协议更新失败: %v", err)
-	}
 	if !isTokenLogin {
 		if !isQRCodeLogin {
 			if err := commonLogin(); err != nil {
@@ -406,23 +383,6 @@ func newClient() *client.QQClient {
 	}
 	c.SetLogger(protocolLogger{})
 	return c
-}
-
-var remoteVersions = map[int]string{
-	1: "https://raw.githubusercontent.com/RomiChan/protocol-versions/master/android_phone.json",
-	6: "https://raw.githubusercontent.com/RomiChan/protocol-versions/master/android_pad.json",
-}
-
-func getRemoteLatestProtocolVersion(protocolType int) ([]byte, error) {
-	url, ok := remoteVersions[protocolType]
-	if !ok {
-		return nil, errors.New("remote version unavailable")
-	}
-	response, err := download.Request{URL: url}.Bytes()
-	if err != nil {
-		return download.Request{URL: "https://ghproxy.com/" + url}.Bytes()
-	}
-	return response, nil
 }
 
 type protocolLogger struct{}
