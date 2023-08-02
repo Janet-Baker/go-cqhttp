@@ -123,10 +123,6 @@ func LoginInteract() {
 
 	if (base.Account.Uin == 0 || (base.Account.Password == "" && !base.Account.Encrypt)) && !global.PathExists("session.token") {
 		log.Warn("账号密码未配置, 将使用二维码登录.")
-		if !base.FastStart {
-			log.Warn("将在 5秒 后继续.")
-			time.Sleep(time.Second * 5)
-		}
 	}
 
 	if base.Debug {
@@ -217,10 +213,6 @@ func LoginInteract() {
 	} else if len(base.Account.Password) > 0 {
 		base.PasswordHash = md5.Sum([]byte(base.Account.Password))
 	}
-	if !base.FastStart {
-		log.Info("Bot将在5秒后登录并开始信息处理, 按 Ctrl+C 取消.")
-		time.Sleep(time.Second * 5)
-	}
 	log.Info("开始尝试登录并同步消息...")
 	log.Infof("使用协议: %s", device.Protocol.Version())
 	cli = newClient()
@@ -269,27 +261,23 @@ func LoginInteract() {
 		cli.PasswordMd5 = base.PasswordHash
 	}
 	download.SetTimeout(time.Duration(base.HTTPTimeout) * time.Second)
-	if !base.FastStart {
+	if base.UpdateProtocol {
 		log.Infof("正在检查协议更新...")
 		currentVersionName := device.Protocol.Version().SortVersionName
 		remoteVersion, err := getRemoteLatestProtocolVersion(int(device.Protocol.Version().Protocol))
 		if err == nil {
 			remoteVersionName := gjson.GetBytes(remoteVersion, "sort_version_name").String()
 			if remoteVersionName != currentVersionName {
-				switch {
-				case !base.UpdateProtocol:
-					log.Infof("检测到协议更新: %s -> %s", currentVersionName, remoteVersionName)
-					log.Infof("如果登录时出现版本过低错误, 可尝试使用 -update-protocol 参数启动")
-				case !isTokenLogin:
+				log.Infof("检测到协议更新: %s -> %s", currentVersionName, remoteVersionName)
+				if !isTokenLogin {
 					_ = device.Protocol.Version().UpdateFromJson(remoteVersion)
 					err := os.WriteFile(versionFile, remoteVersion, 0644)
 					log.Infof("协议版本已更新: %s -> %s", currentVersionName, remoteVersionName)
 					if err != nil {
 						log.Warnln("更新协议版本缓存文件", versionFile, "失败:", err)
 					}
-				default:
-					log.Infof("检测到协议更新: %s -> %s", currentVersionName, remoteVersionName)
-					log.Infof("由于使用了会话缓存, 无法自动更新协议, 请删除缓存后重试")
+				} else {
+					log.Info("由于使用了会话缓存, 无法自动更新协议, 请删除缓存后重试")
 				}
 			}
 		} else if err.Error() != "remote version unavailable" {

@@ -35,7 +35,6 @@ var (
 	UseSSOAddress       bool                // 是否使用服务器下发的新地址进行重连
 	LogForceNew         bool                // 是否在每次启动时强制创建全新的文件储存日志
 	LogColorful         bool                // 是否启用日志颜色
-	FastStart           bool                // 是否为快速启动
 	AllowTempSession    bool                // 是否允许发送临时会话信息
 	UpdateProtocol      bool                // 是否更新协议
 	SignServers         []config.SignServer // 使用特定的服务器进行签名
@@ -64,7 +63,6 @@ func Parse() {
 	flag.BoolVar(&LittleH, "h", false, "this Help")
 	flag.StringVar(&LittleWD, "w", "", "cover the working directory")
 	d := flag.Bool("D", false, "debug mode")
-	flag.BoolVar(&FastStart, "faststart", false, "skip waiting 5 seconds")
 	flag.BoolVar(&UpdateProtocol, "update-protocol", false, "update protocol")
 	flag.Parse()
 
