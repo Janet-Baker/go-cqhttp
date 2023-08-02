@@ -30,7 +30,6 @@ import (
 	"github.com/Mrs4s/go-cqhttp/internal/cache"
 	"github.com/Mrs4s/go-cqhttp/internal/download"
 	"github.com/Mrs4s/go-cqhttp/internal/selfdiagnosis"
-	"github.com/Mrs4s/go-cqhttp/internal/selfupdate"
 	"github.com/Mrs4s/go-cqhttp/modules/servers"
 	"github.com/Mrs4s/go-cqhttp/server"
 )
@@ -112,14 +111,7 @@ func LoginInteract() {
 	arg := os.Args
 	if len(arg) > 1 {
 		for i := range arg {
-			switch arg[i] {
-			case "update":
-				if len(arg) > i+1 {
-					selfupdate.SelfUpdate(arg[i+1])
-				} else {
-					selfupdate.SelfUpdate("")
-				}
-			case "key":
+			if arg[i] == "key" {
 				p := i + 1
 				if len(arg) > p {
 					byteKey = []byte(arg[p])
@@ -137,7 +129,6 @@ func LoginInteract() {
 		}
 	}
 
-	log.Info("当前版本:", base.Version)
 	if base.Debug {
 		log.SetLevel(log.DebugLevel)
 		log.Warnf("已开启Debug模式.")
@@ -379,7 +370,6 @@ func LoginInteract() {
 //   - dump stack: syscall.SIGQUIT, syscall.SIGUSR1
 func WaitSignal() {
 	go func() {
-		selfupdate.CheckUpdate()
 		selfdiagnosis.NetworkDiagnosis(cli)
 	}()
 

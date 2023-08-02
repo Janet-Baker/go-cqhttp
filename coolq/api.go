@@ -24,7 +24,6 @@ import (
 
 	"github.com/Mrs4s/go-cqhttp/db"
 	"github.com/Mrs4s/go-cqhttp/global"
-	"github.com/Mrs4s/go-cqhttp/internal/base"
 	"github.com/Mrs4s/go-cqhttp/internal/cache"
 	"github.com/Mrs4s/go-cqhttp/internal/download"
 	"github.com/Mrs4s/go-cqhttp/internal/msg"
@@ -2025,8 +2024,7 @@ func (bot *CQBot) CQGetVersionInfo() global.MSG {
 	wd, _ := os.Getwd()
 	return OK(global.MSG{
 		"app_name":                   "go-cqhttp",
-		"app_version":                base.Version,
-		"app_full_name":              fmt.Sprintf("go-cqhttp-%s_%s_%s-%s", base.Version, runtime.GOOS, runtime.GOARCH, runtime.Version()),
+		"app_full_name":              fmt.Sprintf("go-cqhttp-%s_%s-%s", runtime.GOOS, runtime.GOARCH, runtime.Version()),
 		"protocol_version":           "v11",
 		"coolq_directory":            wd,
 		"coolq_edition":              "pro",
@@ -2036,7 +2034,6 @@ func (bot *CQBot) CQGetVersionInfo() global.MSG {
 		"plugin_build_configuration": "release",
 		"runtime_version":            runtime.Version(),
 		"runtime_os":                 runtime.GOOS,
-		"version":                    base.Version,
 		"protocol_name":              bot.Client.Device().Protocol,
 	})
 }

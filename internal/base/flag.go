@@ -124,11 +124,10 @@ func Init() {
 // Help cli命令行-h的帮助提示
 func Help() {
 	fmt.Printf(`go-cqhttp service
-version: %s
 Usage:
 server [OPTIONS]
 Options:
-`, Version)
+`)
 
 	flag.PrintDefaults()
 	os.Exit(0)
