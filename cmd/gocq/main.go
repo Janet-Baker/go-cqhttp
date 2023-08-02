@@ -263,26 +263,11 @@ func LoginInteract() {
 				r := binary.NewReader(token)
 				cu := r.ReadInt64()
 				if cu != base.Account.Uin {
-					log.Warnf("警告: 配置文件内的QQ号 (%v) 与缓存内的QQ号 (%v) 不相同", base.Account.Uin, cu)
-					log.Warnf("1. 使用会话缓存继续.")
-					log.Warnf("2. 删除会话缓存并重启.")
-					log.Warnf("请选择:")
-					text := readIfTTY("1")
-					if text == "2" {
-						_ = os.Remove("session.token")
-						log.Infof("缓存已删除.")
-						os.Exit(0)
-					}
+					log.Fatalf("警告: 配置文件内的QQ号 (%v) 与缓存内的QQ号 (%v) 不相同，请检查配置文件内的账号信息是否正确, 或删除 session.token 文件后重试", base.Account.Uin, cu)
 				}
 			}
 			if err = cli.TokenLogin(token); err != nil {
-				_ = os.Remove("session.token")
-				log.Warnf("恢复会话失败: %v , 尝试使用正常流程登录.", err)
-				time.Sleep(time.Second)
-				cli.Disconnect()
-				cli.Release()
-				cli = newClient()
-				cli.UseDevice(device)
+				log.Fatalf("恢复会话失败: %v , 删除session.token后重试", err)
 			} else {
 				isTokenLogin = true
 			}
@@ -367,18 +352,7 @@ func LoginInteract() {
 				saveToken()
 				return
 			}
-			log.Warnf("快速重连失败: %v", err)
-			if isQRCodeLogin {
-				log.Fatalf("快速重连失败, 扫码登录无法恢复会话.")
-			}
-			log.Warnf("快速重连失败, 尝试普通登录. 这可能是因为其他端强行T下线导致的.")
-			time.Sleep(time.Second)
-			if err := commonLogin(); err != nil {
-				log.Errorf("登录时发生致命错误: %v", err)
-			} else {
-				saveToken()
-				break
-			}
+			log.Fatalf("快速重连失败: %v", err)
 		}
 	})
 	saveToken()
