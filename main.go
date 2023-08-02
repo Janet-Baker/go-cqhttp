@@ -14,7 +14,6 @@ import (
 )
 
 func main() {
-	terminal.SetTitle()
 	gocq.InitBase()
 	gocq.PrepareData()
 	gocq.LoginInteract()
