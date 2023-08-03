@@ -349,7 +349,6 @@ func LoginInteract() {
 	cli.SetOnlineStatus(allowStatus[base.Account.Status])
 	servers.Run(coolq.NewQQBot(cli))
 	log.Info("资源初始化完成, 开始处理信息.")
-	log.Info("アトリは、高性能ですから!")
 }
 
 // WaitSignal 在新线程检查更新和网络并等待信号, 必须在 InitBase, PrepareData, LoginInteract 之后执行
